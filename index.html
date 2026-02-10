@@ -102,6 +102,19 @@
       #toolsBar .btn{width:100%; padding:10px 10px;}
     }
 
+
+    /* --- iPhone: shorten rate inputs (v6) --- */
+    #rateGrid > div{min-width:0;}
+    #rateGrid input{width:100%; max-width: 190px; justify-self:start;}
+    @media (max-width: 520px){
+      #rateGrid{grid-template-columns:repeat(2,minmax(0,1fr));}
+      #rateGrid input{max-width: 160px;}
+    }
+    @media (max-width: 380px){
+      #rateGrid{grid-template-columns:1fr;}
+      #rateGrid input{max-width: 100%;}
+    }
+
 </style>
 </head>
 <body>
