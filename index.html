@@ -69,6 +69,30 @@
       header h1{margin-bottom:2px;}
     }
 
+
+    /* --- Mobile card mode --- */
+    .cardlist{display:none;}
+    .itemcard{background:#0f0f12;border:1px solid var(--line);border-radius:18px;padding:12px;margin:10px 0;}
+    .itemhead{display:flex;gap:10px;align-items:flex-start;}
+    .itemtitle{font-size:15px;font-weight:650;line-height:1.2;margin:0;}
+    .itemmeta{font-size:12px;color:var(--muted);margin-top:4px;}
+    .itemgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px;}
+    .itemgrid .field label{margin-bottom:6px;}
+    .itemgrid .field input, .itemgrid .field select{width:100%;}
+    .itemstats{margin-top:12px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}
+    .stat{border:1px solid var(--line);border-radius:14px;padding:10px;background:#0b0b0c;}
+    .stat .k{font-size:12px;color:var(--muted);margin-bottom:6px;}
+    .stat .v{font-size:14px;font-variant-numeric:tabular-nums;}
+    .itemactions{display:flex;gap:10px;margin-top:12px;}
+    .itemactions .btn{flex:1;}
+    .bestpill{display:inline-flex;gap:8px;align-items:center;padding:6px 10px;border-radius:999px;border:1px solid var(--line);background:#0b0b0c;}
+    .bestpill .m{font-size:12px;color:#cbd5e1;}
+    .bestpill .p{font-size:13px;font-weight:650;color:var(--ok);font-variant-numeric:tabular-nums;}
+    @media (max-width: 520px){
+      #tableWrap{display:none;}
+      .cardlist{display:block;}
+    }
+
 </style>
 </head>
 <body>
@@ -153,9 +177,12 @@
         <div class="tag">商品清单</div>
         <div class="right small">点击表格内数值可直接编辑（自动保存）</div>
       </div>
-      <div style="overflow:auto; -webkit-overflow-scrolling: touch;">
+      
+      <div id="tableWrap" style="overflow:auto; -webkit-overflow-scrolling: touch;">
         <table id="tbl"></table>
       </div>
+      <div id="cardList" class="cardlist"></div>
+
       <div class="row" style="margin-top:10px">
         <div class="pill">
           <span class="tag">合计（按每行最优）</span>
@@ -343,12 +370,10 @@ function renderRates() {
     input.type = type;
     input.step = step;
     input.value = state.rates[key];
-    input.addEventListener("input", () => {
-      state.rates[key] = Number(input.value);
-      saveState(state);
-      render();
-    });
-    wrap.appendChild(lab); wrap.appendChild(input);
+    const commitRate = () => { state.rates[key] = Number(input.value); saveState(state); render(); };
+    input.addEventListener("change", commitRate);
+    input.addEventListener("blur", commitRate);
+wrap.appendChild(lab); wrap.appendChild(input);
     grid.appendChild(wrap);
   }
 
@@ -452,11 +477,183 @@ function renderTable() {
   document.getElementById("sumMaster").textContent = "¥" + fmtMoney(sumMaster) + " RMB";
 }
 
+function isMobile() {
+  return window.matchMedia && window.matchMedia("(max-width: 520px)").matches;
+}
+
+function updateSummary() {
+  let sumBest=0, sumReady=0, sumVX=0, sumZFB=0, sumMaster=0;
+  for(const it of state.items){
+    const c = compute(it, state.rates);
+    sumReady += c.totalReady||0;
+    sumVX += c.totalVX||0;
+    sumZFB += c.totalZFB||0;
+    sumMaster += c.totalMaster||0;
+    if(Number.isFinite(c.bestRMB)) sumBest += c.bestRMB;
+  }
+  document.getElementById("sumBest").textContent = "¥" + fmtMoney(sumBest) + " RMB";
+  document.getElementById("sumReady").textContent = "¥" + fmtMoney(sumReady) + " RMB";
+  document.getElementById("sumVX").textContent = "¥" + fmtMoney(sumVX) + " RMB";
+  document.getElementById("sumZFB").textContent = "¥" + fmtMoney(sumZFB) + " RMB";
+  document.getElementById("sumMaster").textContent = "¥" + fmtMoney(sumMaster) + " RMB";
+}
+
+function renderCards() {
+  const list = document.getElementById("cardList");
+  list.innerHTML = "";
+
+  state.items.forEach((it, idx) => {
+    const card = document.createElement("div");
+    card.className = "itemcard";
+
+    const head = document.createElement("div");
+    head.className = "itemhead";
+
+    const left = document.createElement("div");
+    left.style.flex = "1";
+
+    const title = document.createElement("p");
+    title.className = "itemtitle";
+    title.textContent = it.name || "（未命名）";
+
+    const meta = document.createElement("div");
+    meta.className = "itemmeta";
+    meta.textContent = (it.platform ? it.platform + " · " : "") + "点击下方直接编辑";
+
+    left.appendChild(title);
+    left.appendChild(meta);
+
+    const bestpill = document.createElement("div");
+    bestpill.className = "bestpill";
+    bestpill.innerHTML = `<span class="m">最优</span><span class="p" data-best>-</span>`;
+    head.appendChild(left);
+    head.appendChild(bestpill);
+    card.appendChild(head);
+
+    const grid = document.createElement("div");
+    grid.className = "itemgrid";
+
+    const mkField = (label, inputEl) => {
+      const w = document.createElement("div");
+      w.className = "field";
+      const l = document.createElement("label");
+      l.textContent = label;
+      w.appendChild(l);
+      w.appendChild(inputEl);
+      return w;
+    };
+
+    const inPlatform = document.createElement("input");
+    inPlatform.value = it.platform || "";
+    inPlatform.placeholder = "平台";
+    inPlatform.addEventListener("input", () => { it.platform = inPlatform.value; saveState(state); meta.textContent = (it.platform ? it.platform + " · " : "") + "点击下方直接编辑"; });
+
+    const inName = document.createElement("input");
+    inName.value = it.name || "";
+    inName.placeholder = "商品名";
+    inName.addEventListener("input", () => { it.name = inName.value; saveState(state); title.textContent = it.name || "（未命名）"; });
+
+    const inJPY = document.createElement("input");
+    inJPY.type = "number";
+    inJPY.inputMode = "decimal";
+    inJPY.value = it.jpy ?? 0;
+    inJPY.addEventListener("input", () => { it.jpy = Number(inJPY.value||0); saveState(state); updateCardComputed(); });
+
+    const inQty = document.createElement("input");
+    inQty.type = "number";
+    inQty.inputMode = "decimal";
+    inQty.value = it.qty ?? 1;
+    inQty.addEventListener("input", () => { it.qty = Number(inQty.value||0); saveState(state); updateCardComputed(); });
+
+    const inDisc = document.createElement("input");
+    inDisc.type = "number";
+    inDisc.step = "0.01";
+    inDisc.inputMode = "decimal";
+    inDisc.value = it.discount ?? 1;
+    inDisc.addEventListener("input", () => { it.discount = Number(inDisc.value||1); saveState(state); updateCardComputed(); });
+
+    const selTax = document.createElement("select");
+    selTax.innerHTML = `<option value="YES">YES</option><option value="NO">NO</option>`;
+    selTax.value = (it.taxFree===true || it.taxFree==="YES") ? "YES" : "NO";
+    selTax.addEventListener("change", () => { it.taxFree = selTax.value==="YES"; saveState(state); updateCardComputed(); });
+
+    grid.appendChild(mkField("平台", inPlatform));
+    grid.appendChild(mkField("商品名", inName));
+    grid.appendChild(mkField("JPY", inJPY));
+    grid.appendChild(mkField("数量", inQty));
+    grid.appendChild(mkField("折扣幅度", inDisc));
+    grid.appendChild(mkField("免税", selTax));
+    card.appendChild(grid);
+
+    const stats = document.createElement("div");
+    stats.className = "itemstats";
+    const mkStat = (k) => {
+      const s = document.createElement("div");
+      s.className = "stat";
+      s.innerHTML = `<div class="k">${k}</div><div class="v mono money" data-k="${k}">-</div>`;
+      return s;
+    };
+
+    const sReady = mkStat("Ready(RMB)");
+    const sVX = mkStat("VX(RMB)");
+    const sZFB = mkStat("ZFB(RMB)");
+    const sMaster = mkStat("Master(RMB)");
+    const sJPYDisc = mkStat("JPY/折扣");
+    const sJPYNet = mkStat("JPY/免税");
+    const sProfit = mkStat("Profit");
+
+    stats.appendChild(sReady);
+    stats.appendChild(sVX);
+    stats.appendChild(sZFB);
+    stats.appendChild(sMaster);
+    stats.appendChild(sJPYDisc);
+    stats.appendChild(sJPYNet);
+    stats.appendChild(sProfit);
+    card.appendChild(stats);
+
+    const actions = document.createElement("div");
+    actions.className = "itemactions";
+    const del = document.createElement("button");
+    del.className = "btn danger";
+    del.textContent = "删除";
+    del.addEventListener("click", () => {
+      state.items.splice(idx, 1);
+      saveState(state);
+      render();
+    });
+    actions.appendChild(del);
+    card.appendChild(actions);
+
+    function updateCardComputed() {
+      const c = compute(it, state.rates);
+      sReady.querySelector(".v").textContent = fmtMoney(c.totalReady);
+      sVX.querySelector(".v").textContent = fmtMoney(c.totalVX);
+      sZFB.querySelector(".v").textContent = fmtMoney(c.totalZFB);
+      sMaster.querySelector(".v").textContent = fmtMoney(c.totalMaster);
+      sJPYDisc.querySelector(".v").textContent = fmtMoney(c.jpyAfterDiscount);
+      sJPYNet.querySelector(".v").textContent = fmtMoney(c.jpyNet);
+      sProfit.querySelector(".v").textContent = fmtMoney(c.profit);
+      bestpill.querySelector("[data-best]").textContent = (c.bestMethod ? (c.bestMethod + " ¥" + fmtMoney(c.bestRMB)) : "-");
+      updateSummary();
+    }
+    updateCardComputed();
+
+    list.appendChild(card);
+  });
+
+  updateSummary();
+}
+
 function render() {
   renderRates();
-  renderTable();
+  if(isMobile()) {
+    renderCards();
+  } else {
+    renderTable();
+  }
 }
 render();
+window.addEventListener("resize", () => { render(); });
 
 // Add item
 document.getElementById("btnAdd").addEventListener("click", () => {
