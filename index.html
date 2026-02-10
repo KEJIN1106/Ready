@@ -93,13 +93,22 @@
       .cardlist{display:block;}
     }
 
+
+    /* --- iPhone header buttons fix (v5) --- */
+    @media (max-width: 520px){
+      header .row{flex-direction:column; align-items:stretch;}
+      header h1{width:100%;}
+      #toolsBar{display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:10px; width:100%; margin-top:10px;}
+      #toolsBar .btn{width:100%; padding:10px 10px;}
+    }
+
 </style>
 </head>
 <body>
   <header>
     <div class="row">
       <h1>Ready 助手（PWA）</h1>
-      <div class="right row">
+      <div class="right row" id="toolsBar">
         <button class="btn" id="btnExport">导出JSON</button>
         <button class="btn" id="btnImport">导入JSON</button>
         <button class="btn danger" id="btnReset">重置</button>
