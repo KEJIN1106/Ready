@@ -58,6 +58,17 @@
       #inPlatform, #inName{min-width:0;}
     }
 
+
+    /* --- iPhone layout tweaks (v3) --- */
+    body{padding-bottom: calc(env(safe-area-inset-bottom) + 96px);} /* avoid Safari bottom bar covering content */
+    header .row{flex-wrap:wrap;}
+    @media (max-width: 520px){
+      header .row{flex-direction:column; align-items:flex-start;}
+      header .right.row{width:100%; justify-content:flex-start; gap:8px; margin-top:10px;}
+      header .right.row .btn{flex:1; min-width:0;}
+      header h1{margin-bottom:2px;}
+    }
+
 </style>
 </head>
 <body>
